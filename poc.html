@@ -1,0 +1,246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd">
+
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>untitled</title>
+	<meta name="generator" content="TextMate http://macromates.com/">
+	<meta name="author" content="Jan Krutisch">
+	<!-- Date: 2007-10-02 -->
+	
+	<script type="text/javascript" charset="utf-8">
+
+
+   function cls() {
+     document.getElementById('output').value = ""
+   }
+   
+   function puts(text) {
+     document.getElementById('output').value += text + "\n"
+   }
+
+   Turtle = new Object()
+   
+   
+   Turtle.nextBlock = function(string) {
+     var blockCount = 0
+     var blockStart = 0
+     for(var pos = 0;pos < string.length; pos++) {
+       var current = string.substr(pos,1)
+       if(current == ']') {
+          if(blockCount == 1) return [string.substring(0,blockStart-1), string.substring(blockStart, pos), string.substring(pos+1, string.length)]
+          blockCount--
+       }
+       if(current == '[') {
+         if(blockCount == 0) blockStart = pos + 1
+         blockCount++
+       }
+     }
+     return ""
+   }
+   
+   Turtle.drawTurtle = function() {
+     // Turtle.context.save()
+     //   targetX = Turtle.width / 2 + Turtle.x
+     //   targetY = Turtle.height / 2 + Turtle.y
+     //   Turtle.context.beginPath()
+     //   Turtle.context.moveTo(targetX,targetY)
+     //   Turtle.context.lineTo(targetX,targetY-2)
+     //   Turtle.context.lineWidth = 5
+     //   Turtle.context.strokeStyle = "#ff0000"
+     //   Turtle.context.stroke()
+     //   Turtle.context.restore()
+     
+   }
+   
+   Turtle.moveTo = function(x,y) {
+     var baseX = Turtle.width / 2 + Turtle.x
+     var baseY = Turtle.height / 2 + Turtle.y
+     var targetX = Turtle.width / 2 + x
+     var targetY = Turtle.height / 2 + y
+     
+     if(Turtle.pen > 0) {
+       
+       Turtle.context.beginPath()
+       Turtle.context.moveTo(baseX, baseY)
+       Turtle.context.lineTo(targetX, targetY)
+       Turtle.context.stroke()
+     } 
+     Turtle.x = x; Turtle.y = y
+   }
+   
+   Turtle.defineProcedure = function(id, block, formals) {
+     if (!Turtle.procedures) {
+       Turtle.procedures = new Object()
+     }
+     
+     if(formals) { 
+       formalsArray = formals.replace(/ *$/g, '').replace(/^ */g,'').split(" ")
+    } else {
+      formalsArray = []
+    }
+     Turtle.procedures[id] = { code: block, params: formalsArray }
+     
+   }
+
+   Turtle.callProcedure = function(id, args) {
+     var code = Turtle.procedures[id].code
+     // TODO: parameter-matching
+     Turtle.doCommand(Turtle.procedures[id].code)
+     Turtle.doCommand(args)
+   }
+   
+   /////////////////////////////////////// LANGUAGE
+   
+   Turtle.forward = function(args) { Turtle.fd(args) }
+   Turtle.fd = function(args) {
+     
+     var matches = args.match(/([0-9.]+)(.*)/)
+     var value = matches[1]
+     var rad = Turtle.angle / 180 * Math.PI
+     var xDist = Math.sin(rad) * parseFloat(value)
+     var yDist = Math.cos(rad) * parseFloat(value)
+     Turtle.moveTo(Turtle.x + xDist, Turtle.y - yDist)
+     Turtle.doCommand(matches[2])
+   }
+
+   Turtle.backward = function(args) { Turtle.bw(args) }
+   Turtle.bw = function(args) {     
+     var rad = Turtle.angle / 180 * Math.PI
+     var xDist = Math.sin(rad) * parseFloat(args[1])
+     var yDist = Math.cos(rad) * parseFloat(args[1])
+     Turtle.moveTo(Turtle.x - xDist, Turtle.y + yDist)
+   }
+
+   Turtle.right = function(args) { Turtle.rt(args) }   
+   Turtle.rt = function(args) {
+     var matches = args.match(/([0-9.]+)(.*)/)
+     var value = matches[1]
+     Turtle.angle += parseFloat(value)
+     Turtle.doCommand(matches[2])
+   }
+   
+   Turtle.left = function(args) { Turtle.lt(args) }   
+   Turtle.lt = function(args) {
+     var matches = args.match(/([0-9.]+)(.*)/)
+     var value = matches[1]
+     Turtle.angle -= parseFloat(value)
+     Turtle.doCommand(matches[2])
+   }
+   
+   Turtle.clear = function(args) {
+     Turtle.context.clearRect(0,0,Turtle.width, Turtle.height)
+     Turtle.doCommand(args)
+   }
+   
+   Turtle.pendown = function(args) {
+     Turtle.pen = 1
+     Turtle.doCommand(args)
+   }
+   Turtle.penup = function(args) {
+     Turtle.pen = 0
+     Turtle.doCommand(args)
+   }
+   
+   Turtle.init = function(args) {
+     cls()
+     var canvas = document.getElementById("MyCanvas");
+     Turtle.context = canvas.getContext("2d");     
+     Turtle.width = Turtle.context.canvas.width
+     Turtle.height = Turtle.context.canvas.height
+     Turtle.clear()
+     Turtle.home()
+     Turtle.pen = 1
+     Turtle.doCommand(args)
+   }
+   Turtle.home = function(args) {
+     puts("home")
+     Turtle.angle = 0
+     var pen = Turtle.pen
+     Turtle.pen = 0
+     Turtle.moveTo(0,0)
+     Turtle.pen = pen
+     Turtle.doCommand(args)
+   }
+
+   Turtle.repeat = function(args) { Turtle.rp(args)}
+   Turtle.rp = function(args) {
+     var parts = Turtle.nextBlock(args)
+     if(parts.length != 3) return
+     var repeat = parseInt(parts[0])
+     var block = parts[1]
+     for(var i=0;i<repeat;i++) {
+       Turtle.doCommand(block)
+     }
+     Turtle.doCommand(parts[2])
+   }
+   
+   
+   Turtle.to = function(args) {
+     var parts = Turtle.nextBlock(args)
+     console.log(parts.length)
+     if(parts.length != 3) return
+     var matches = args.match(/([a-z][a-z0-9]*)\s+(\:[a-z][a-z0-9\s\:])*/)
+     console.log(matches)     
+     if(!matches) return
+     var id = matches[1]
+     var formals = matches[2]     
+     Turtle.defineProcedure(id, parts[1], formals)
+     console.log(parts[1])
+     Turtle.doCommand(parts[2])
+   }
+
+   
+   Turtle.doCommand = function(command) {
+    var docommand = "Turtle.doRealCommand('" + command + "');";
+    window.setTimeout(docommand, 10);
+   }
+   
+   
+   
+   Turtle.doRealCommand = function(command) {
+     if(!command) return 
+     cmdString = command.toLowerCase().replace(/\n/g, ' ')
+     console.log(cmdString)
+     var matches = cmdString.match(/([a-z][a-z0-9]*)(.*)/)
+     if(!matches) return
+     var cmd = matches[1]
+     var args = matches[2]
+     var call = "Turtle." + cmd
+     if (eval(call) != undefined) {
+       puts("exec call: " + call)
+       eval(call)(args)
+     } else if (Turtle.procedures && Turtle.procedures[cmd] != undefined) {
+       console.log("proc: " + cmd)
+       Turtle.callProcedure(cmd, args)
+     } else {
+         puts("unknwn: " + call)    
+     }
+       
+       
+     //Turtle.drawTurtle()
+   }
+   
+   function doCommand() {
+     Turtle.doRealCommand(document.getElementById('command').value);
+     return false;
+   }
+
+	</script>
+</head>
+<body onload="Turtle.init()">
+    <div>
+    <canvas id="MyCanvas" width='300' height='300' style="background-color:#eee;" />
+    </div>
+    <form onsubmit="doCommand(); return false;">
+      <p><textarea name="command" id="command" cols="60" rows ="10"></textarea>
+      <a href="#" onclick="return doCommand();">Do</a>
+      </p>
+      <p>
+        <textarea id="output" name="output" cols="60" rows="10"></textarea>
+      </p>
+    </form>
+</div>
+</body>
+</html>
