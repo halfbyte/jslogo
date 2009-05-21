@@ -1,0 +1,217 @@
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3/jquery.min.js"></script>
+<script>
+
+  log = function(v)
+  {
+    $('#log').append($('<p>'+v+'</p>'));
+  }
+
+
+  Turtle = new Object();
+
+  Turtle.init = function(objid)
+  {
+    this.context = document.getElementById(objid).getContext("2d");
+
+    this.width = this.context.canvas.width;
+    this.height = this.context.canvas.height;
+    this.pen = 1;
+    this.restartpos();
+  };
+
+  Turtle.eraseall = function()
+  {
+    this.context.clearRect( 0, 0, this.width, this.height);
+  };
+
+  Turtle.restartpos = function()
+  {
+    this.x = this.width / 2;
+    this.y = this.height / 2 ;
+    this.angle = 0;
+  };
+
+  Turtle.walk = function(v)
+  {
+    var rad = this.angle / 180 * Math.PI
+    xdir = Math.sin(rad) * parseFloat(v)
+    ydir = Math.cos(rad) * parseFloat(v)
+
+    this.moveTo(this.x + xdir, this.y + ydir);
+  };
+
+  Turtle.moveTo = function(x,y)
+  {
+    if(this.pen > 0)
+    {
+      this.context.beginPath()
+      this.context.moveTo(this.x, this.y)
+      this.context.lineTo(x, y)
+      this.context.stroke()
+    } 
+    this.x = x; this.y = y
+  };
+
+  Turtle.logo = new Object();
+  Turtle.logo.forward = function(v)
+  { Turtle.walk(v); };
+
+  Turtle.logo.backward = function(v)
+  { Turtle.walk(-v); };
+
+   Turtle.logo.right = function(v)
+  { Turtle.angle += v; };
+
+   Turtle.logo.left = function(v)
+  { Turtle.angle -= v; };
+
+  Turtle.logo.pendown = function()
+  { Turtle.pen = 1; };
+
+  Turtle.logo.penup = function()
+  { Turtle.pen = 0; };
+
+  Turtle.logo.home = function()
+  { Turtle.restartpos()};
+
+  Turtle.logo.clear = function()
+  { Turtle.eraseall();};
+
+  Turtle.logo.repeat = function(n, code)
+  {
+    for(var i=0; i<n; i++)
+    {
+      Turtle.run(code)
+    }
+  };
+
+  Turtle.logolib =
+  {
+    forward: {args: 1, func: 'Turtle.logo.forward'},
+    backward: {args: 1, func: 'Turtle.logo.backward'},
+    left: {args: 1, func: 'Turtle.logo.left'},
+    right: {args: 1, func: 'Turtle.logo.right'},
+    repeat: {args: 1, block: true, func: 'Turtle.logo.repeat'},
+    quadrado: {args: 1, code: 'repeat 4 [ forward $$0 left 90 ]'},
+    poder: {value: '100'}
+  };
+
+  Turtle.run = function(code)
+  {
+    var unproc = code;
+
+    var nextblock = function(s, e)
+    {
+      var blockCount = 0;
+        var blockStart = 0;
+        for(var pos = 0;pos < unproc.length; pos++)
+        {
+          var current = unproc.substr(pos,1);
+          if(current == e)
+          {
+            if(blockCount == 1)
+            {
+              out = unproc.substring(blockStart, pos);
+              unproc = unproc.substring(pos+1, unproc.length);
+              return out;
+            }
+            blockCount--;
+          }
+          if(current == s)
+          {
+            if(blockCount == 0)
+              blockStart = pos + 1;
+              blockCount++;
+          }
+        }
+    };
+
+    var getargs = function(a)
+    {
+      var out = []
+      for(var i=0; i<a; i++)
+      {
+        var m = unproc.match(/([a-z0-9]+(.[0-9]+)?)(.*)/);
+        if(!m)
+        {
+          alert('Erro de sintaxe!');
+          return;
+        }
+        if(Turtle.logolib[m[1]] && Turtle.logolib[m[1]].value)
+          value = Turtle.logolib[m[1]].value;
+        else
+          value = m[1];
+        out.push(value);
+        unproc = m[3];
+      }
+      return out;
+    }
+
+    unproc = unproc.toLowerCase().replace(/\n/g, ' ');
+    var matches = unproc.match(/([a-z][a-z0-9]*)(.*)/);
+    if(!matches) return;
+    var cmd = matches[1];
+    unproc = matches[2]; 
+    var command = Turtle.logolib[cmd];
+    if(command)
+    {
+      args = command.args;
+      argsar = getargs(args);
+
+      blkcode = '';
+      if(command.block)
+      {
+          out = nextblock('[', ']');
+          blkcode = ',"'+out+'"';
+      }
+
+      if(command.code)
+      {
+        var run = command.code;
+        for(var i=0; i<argsar.length; i++)
+        {
+          run = run.replace('$$'+i, argsar[i]); 
+        }
+        Turtle.run(run);
+      }
+      else
+      {
+        call = command.func+'('+argsar.join()+blkcode+')';
+        eval(call);
+      }
+      Turtle.run(unproc);
+    }
+
+  };
+
+
+  $(function()
+  {
+    Turtle.init('place');
+
+
+/*  Turtle.logo.backward(100);
+    Turtle.logo.left(90);
+    Turtle.logo.penup();
+    Turtle.logo.backward(100);
+    Turtle.logo.home();
+    Turtle.logo.eraseall();
+    Turtle.logo.left(90);
+    Turtle.logo.pendown();
+    Turtle.logo.backward(100);
+*/
+
+    $('#exec').click(function()
+    {
+      Turtle.run($('#thecode').val());
+    });
+  });
+
+</script>
+
+<canvas id="place" width="500" height="500" style="border: 1px solid;"></canvas>
+
+<textarea id="thecode" style="width:200px; height:200px;">
+</textarea><button id="exec" />
+
+</form>
